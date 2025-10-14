@@ -1,6 +1,6 @@
 package com.mediaviewer;
 
-import com.mediaviewer.controller.*;
+import com.mediaviewer.controller.DashboardController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;

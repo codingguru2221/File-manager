@@ -46,13 +46,13 @@
     <!-- Tab Pane -->
     <TabPane fx:id="tabPane" VBox.vgrow="ALWAYS">
         <Tab text="Images" closable="false">
-            <fx:include source="imageTab.fxml" />
+            <fx:include fx:id="imageTab" source="imageTab.fxml" />
         </Tab>
         <Tab text="Videos" closable="false">
-            <fx:include source="videoTab.fxml" />
+            <fx:include fx:id="videoTab" source="videoTab.fxml" />
         </Tab>
         <Tab text="Documents" closable="false">
-            <fx:include source="documentTab.fxml" />
+            <fx:include fx:id="documentTab" source="documentTab.fxml" />
         </Tab>
     </TabPane>
 </VBox>

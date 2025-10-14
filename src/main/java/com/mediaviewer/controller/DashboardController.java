@@ -36,6 +36,16 @@ public class DashboardController {
     @FXML
     private TabPane tabPane;
     
+    // References to the tab controllers through fx:id
+    @FXML
+    private ImageTabController imageTabController;
+    
+    @FXML
+    private VideoTabController videoTabController;
+    
+    @FXML
+    private DocumentTabController documentTabController;
+    
     private FileScanner fileScanner;
     private Stage primaryStage;
     
@@ -87,6 +97,8 @@ public class DashboardController {
                 e.printStackTrace();
                 javafx.application.Platform.runLater(() -> {
                     progressLabel.setText("Error scanning folder: " + e.getMessage());
+                    scanProgressBar.setVisible(false);
+                    progressLabel.setVisible(false);
                 });
             }
         }).start();
@@ -97,9 +109,6 @@ public class DashboardController {
         progressLabel.setVisible(false);
         
         updateCounts();
-        
-        // Notify tab controllers to update their views
-        // This would typically be done through a proper event system or by passing references
         updateTabs();
     }
     
@@ -110,9 +119,16 @@ public class DashboardController {
     }
     
     private void updateTabs() {
-        // In a full implementation, we would notify the tab controllers to refresh their views
-        // This is a simplified version
-        System.out.println("Updating tabs with new data...");
+        // Update each tab with the scanned data
+        if (imageTabController != null) {
+            imageTabController.updateImages(fileScanner.getImageFiles());
+        }
+        if (videoTabController != null) {
+            videoTabController.updateVideos(fileScanner.getVideoFiles());
+        }
+        if (documentTabController != null) {
+            documentTabController.updateDocuments(fileScanner.getDocumentFiles());
+        }
     }
     
     public List<MediaFile> getImageFiles() {

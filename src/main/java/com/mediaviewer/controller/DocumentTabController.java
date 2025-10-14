@@ -1,15 +1,14 @@
 package com.mediaviewer.controller;
 
 import com.mediaviewer.model.MediaFile;
-import com.mediaviewer.utils.ThumbnailGenerator;
 import javafx.fxml.FXML;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
 import java.awt.*;
-import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.time.format.DateTimeFormatter;

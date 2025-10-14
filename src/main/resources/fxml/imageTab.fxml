@@ -4,8 +4,8 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.FlowPane?>
 
-<ScrollPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.mediaviewer.controller.ImageTabController">
-    <FlowPane fx:id="imageFlowPane" hgap="10" vgap="10">
+<ScrollPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.mediaviewer.controller.ImageTabController" fitToWidth="true" fitToHeight="true">
+    <FlowPane fx:id="imageFlowPane" hgap="10" vgap="10" prefWrapLength="200">
         <padding>
             <Insets top="10" right="10" bottom="10" left="10" />
         </padding>
