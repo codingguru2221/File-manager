@@ -1,0 +1,97 @@
+package com.mediaviewer.utils;
+
+import com.mediaviewer.model.MediaFile;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+
+public class FileScanner {
+    private List<MediaFile> imageFiles;
+    private List<MediaFile> videoFiles;
+    private List<MediaFile> documentFiles;
+    private AtomicInteger scannedFilesCount;
+    
+    public FileScanner() {
+        this.imageFiles = new ArrayList<>();
+        this.videoFiles = new ArrayList<>();
+        this.documentFiles = new ArrayList<>();
+        this.scannedFilesCount = new AtomicInteger(0);
+    }
+    
+    public void scanDirectory(String directoryPath, Consumer<Integer> progressCallback) {
+        imageFiles.clear();
+        videoFiles.clear();
+        documentFiles.clear();
+        scannedFilesCount.set(0);
+        
+        File directory = new File(directoryPath);
+        if (!directory.exists() || !directory.isDirectory()) {
+            throw new IllegalArgumentException("Invalid directory path: " + directoryPath);
+        }
+        
+        scanDirectoryRecursive(directory, progressCallback);
+    }
+    
+    private void scanDirectoryRecursive(File directory, Consumer<Integer> progressCallback) {
+        File[] files = directory.listFiles();
+        if (files == null) return;
+        
+        for (File file : files) {
+            if (file.isDirectory()) {
+                scanDirectoryRecursive(file, progressCallback);
+            } else {
+                MediaFile mediaFile = new MediaFile(file);
+                categorizeFile(mediaFile);
+                
+                int count = scannedFilesCount.incrementAndGet();
+                if (progressCallback != null && count % 10 == 0) {
+                    progressCallback.accept(count);
+                }
+            }
+        }
+    }
+    
+    private void categorizeFile(MediaFile mediaFile) {
+        switch (mediaFile.getFileType()) {
+            case "image":
+                imageFiles.add(mediaFile);
+                break;
+            case "video":
+                videoFiles.add(mediaFile);
+                break;
+            case "document":
+                documentFiles.add(mediaFile);
+                break;
+        }
+    }
+    
+    public List<MediaFile> getImageFiles() {
+        return new ArrayList<>(imageFiles);
+    }
+    
+    public List<MediaFile> getVideoFiles() {
+        return new ArrayList<>(videoFiles);
+    }
+    
+    public List<MediaFile> getDocumentFiles() {
+        return new ArrayList<>(documentFiles);
+    }
+    
+    public int getTotalFilesCount() {
+        return imageFiles.size() + videoFiles.size() + documentFiles.size();
+    }
+    
+    public int getImageFilesCount() {
+        return imageFiles.size();
+    }
+    
+    public int getVideoFilesCount() {
+        return videoFiles.size();
+    }
+    
+    public int getDocumentFilesCount() {
+        return documentFiles.size();
+    }
+}

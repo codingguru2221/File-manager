@@ -1,0 +1,114 @@
+/* Main application styling */
+
+.root {
+    -fx-background-color: #f4f4f4;
+}
+
+/* Dashboard header */
+.header {
+    -fx-background-color: #2c3e50;
+    -fx-padding: 10px;
+}
+
+.header-label {
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+/* Stats section */
+.stats-grid {
+    -fx-background-color: #ecf0f1;
+    -fx-padding: 15px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.stat-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+.stat-value {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3498db;
+}
+
+/* Media cards */
+.media-card {
+    -fx-background-color: white;
+    -fx-padding: 10px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 1);
+    -fx-alignment: center;
+}
+
+.media-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 2);
+}
+
+.media-card .label {
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+/* Buttons */
+.button {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 3px;
+}
+
+.button:hover {
+    -fx-background-color: #2980b9;
+}
+
+/* Text fields */
+.text-field {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 3px;
+    -fx-padding: 5px;
+}
+
+/* Tab pane */
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #34495e;
+}
+
+.tab-pane .tab {
+    -fx-background-color: #bdc3c7;
+    -fx-text-fill: #2c3e50;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+/* Table view */
+.table-view {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+}
+
+.table-view .table-column {
+    -fx-alignment: CENTER;
+}
+
+.table-view .table-row-cell {
+    -fx-border-color: transparent;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+/* Progress bar */
+.progress-bar {
+    -fx-accent: #3498db;
+}
