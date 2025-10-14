@@ -4,10 +4,12 @@ import com.mediaviewer.model.MediaFile;
 import com.mediaviewer.utils.FileScanner;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.text.DecimalFormat;
 import java.util.List;
 
 public class DashboardController {
@@ -19,6 +21,18 @@ public class DashboardController {
     private TextField searchField;
     
     @FXML
+    private VBox folderInfoBox;
+    
+    @FXML
+    private Label folderNameLabel;
+    
+    @FXML
+    private Label folderPathLabel;
+    
+    @FXML
+    private Label folderSizeLabel;
+    
+    @FXML
     private Label imageCountLabel;
     
     @FXML
@@ -26,6 +40,15 @@ public class DashboardController {
     
     @FXML
     private Label documentCountLabel;
+    
+    @FXML
+    private Label imageSizeLabel;
+    
+    @FXML
+    private Label videoSizeLabel;
+    
+    @FXML
+    private Label documentSizeLabel;
     
     @FXML
     private ProgressBar scanProgressBar;
@@ -48,6 +71,7 @@ public class DashboardController {
     
     private FileScanner fileScanner;
     private Stage primaryStage;
+    private File currentFolder;
     
     @FXML
     public void initialize() {
@@ -71,6 +95,7 @@ public class DashboardController {
         if (primaryStage != null) {
             File selectedDirectory = directoryChooser.showDialog(primaryStage);
             if (selectedDirectory != null) {
+                currentFolder = selectedDirectory;
                 scanFolder(selectedDirectory);
             }
         }
@@ -108,14 +133,34 @@ public class DashboardController {
         scanProgressBar.setVisible(false);
         progressLabel.setVisible(false);
         
+        updateFolderInfo();
         updateCounts();
         updateTabs();
+    }
+    
+    private void updateFolderInfo() {
+        if (currentFolder != null) {
+            folderInfoBox.setVisible(true);
+            folderNameLabel.setText("Folder: " + currentFolder.getName());
+            folderPathLabel.setText("Location: " + currentFolder.getAbsolutePath());
+            
+            // Calculate total size
+            long totalSize = fileScanner.getTotalFilesSize();
+            folderSizeLabel.setText("Total Size: " + formatFileSize(totalSize));
+        } else {
+            folderInfoBox.setVisible(false);
+        }
     }
     
     private void updateCounts() {
         imageCountLabel.setText(String.valueOf(fileScanner.getImageFilesCount()));
         videoCountLabel.setText(String.valueOf(fileScanner.getVideoFilesCount()));
         documentCountLabel.setText(String.valueOf(fileScanner.getDocumentFilesCount()));
+        
+        // Update size labels
+        imageSizeLabel.setText(formatFileSize(fileScanner.getImageFilesSize()));
+        videoSizeLabel.setText(formatFileSize(fileScanner.getVideoFilesSize()));
+        documentSizeLabel.setText(formatFileSize(fileScanner.getDocumentFilesSize()));
     }
     
     private void updateTabs() {
@@ -129,6 +174,13 @@ public class DashboardController {
         if (documentTabController != null) {
             documentTabController.updateDocuments(fileScanner.getDocumentFiles());
         }
+    }
+    
+    private String formatFileSize(long size) {
+        if (size < 1024) return size + " B";
+        if (size < 1024 * 1024) return String.format("%.1f KB", size / 1024.0);
+        if (size < 1024 * 1024 * 1024) return String.format("%.1f MB", size / (1024.0 * 1024));
+        return String.format("%.1f GB", size / (1024.0 * 1024 * 1024));
     }
     
     public List<MediaFile> getImageFiles() {

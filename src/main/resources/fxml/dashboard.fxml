@@ -18,6 +18,13 @@
         <TextField fx:id="searchField" promptText="Search files..." prefWidth="200" />
     </HBox>
     
+    <!-- Folder Info Section -->
+    <VBox fx:id="folderInfoBox" visible="false" style="-fx-background-color: #ecf0f1; -fx-padding: 10; -fx-border-radius: 5; -fx-background-radius: 5; -fx-margin: 10 0 10 0;">
+        <Label fx:id="folderNameLabel" style="-fx-font-weight: bold;" />
+        <Label fx:id="folderPathLabel" />
+        <Label fx:id="folderSizeLabel" />
+    </VBox>
+    
     <!-- Stats Section -->
     <GridPane hgap="10" vgap="10" style="-fx-background-color: #f0f0f0; -fx-padding: 15; -fx-border-radius: 5;">
         <padding>
@@ -31,12 +38,15 @@
         
         <Label text="Images" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: bold;" />
         <Label fx:id="imageCountLabel" text="0" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 20px;" />
+        <Label fx:id="imageSizeLabel" text="0 MB" GridPane.columnIndex="0" GridPane.rowIndex="2" />
         
         <Label text="Videos" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;" />
         <Label fx:id="videoCountLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-size: 20px;" />
+        <Label fx:id="videoSizeLabel" text="0 MB" GridPane.columnIndex="1" GridPane.rowIndex="2" />
         
         <Label text="Documents" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-font-weight: bold;" />
         <Label fx:id="documentCountLabel" text="0" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-font-size: 20px;" />
+        <Label fx:id="documentSizeLabel" text="0 MB" GridPane.columnIndex="2" GridPane.rowIndex="2" />
     </GridPane>
     
     <!-- Progress Bar -->

@@ -94,4 +94,21 @@ public class FileScanner {
     public int getDocumentFilesCount() {
         return documentFiles.size();
     }
+    
+    // New methods for size calculations
+    public long getTotalFilesSize() {
+        return getImageFilesSize() + getVideoFilesSize() + getDocumentFilesSize();
+    }
+    
+    public long getImageFilesSize() {
+        return imageFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+    }
+    
+    public long getVideoFilesSize() {
+        return videoFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+    }
+    
+    public long getDocumentFilesSize() {
+        return documentFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+    }
 }
