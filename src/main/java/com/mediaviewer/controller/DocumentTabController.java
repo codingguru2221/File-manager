@@ -7,12 +7,16 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextInputDialog;
 
 import java.awt.*;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 public class DocumentTabController {
     
@@ -56,6 +60,30 @@ public class DocumentTabController {
                     openFile(mediaFile);
                 }
             });
+            
+            // Add context menu for additional actions
+            ContextMenu contextMenu = new ContextMenu();
+            
+            MenuItem favoriteItem = new MenuItem("Toggle Favorite");
+            favoriteItem.setOnAction(event -> {
+                MediaFile mediaFile = row.getItem();
+                if (mediaFile != null) {
+                    mediaFile.setFavorite(!mediaFile.isFavorite());
+                    documentTableView.refresh();
+                }
+            });
+            
+            MenuItem tagItem = new MenuItem("Add Tag");
+            tagItem.setOnAction(event -> {
+                MediaFile mediaFile = row.getItem();
+                if (mediaFile != null) {
+                    showTagDialog(mediaFile);
+                }
+            });
+            
+            contextMenu.getItems().addAll(favoriteItem, tagItem);
+            row.setContextMenu(contextMenu);
+            
             return row;
         });
     }
@@ -83,5 +111,21 @@ public class DocumentTabController {
             e.printStackTrace();
             // In a real application, you might want to show an error dialog
         }
+    }
+    
+    private void showTagDialog(MediaFile mediaFile) {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Add Tag");
+        dialog.setHeaderText("Add a tag to " + mediaFile.getFileName());
+        dialog.setContentText("Tag:");
+        
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(tag -> {
+            mediaFile.addTag(tag);
+            // Refresh the dashboard to update the tag panel
+            if (dashboardController != null) {
+                // We would need to call a method to refresh the tag panel
+            }
+        });
     }
 }
