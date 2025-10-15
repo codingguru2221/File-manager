@@ -58,7 +58,7 @@ public class ProjectTabController {
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && (!row.isEmpty())) {
                     MediaFile mediaFile = row.getItem();
-                    openFile(mediaFile);
+                    openProjectFolder(mediaFile);
                 }
             });
             
@@ -126,8 +126,9 @@ public class ProjectTabController {
         return String.format("%.1f GB", size / (1024.0 * 1024 * 1024));
     }
     
-    private void openFile(MediaFile mediaFile) {
+    private void openProjectFolder(MediaFile mediaFile) {
         try {
+            // Open the project folder in the system file explorer
             Desktop.getDesktop().open(mediaFile.getFilePath().toFile());
         } catch (IOException e) {
             e.printStackTrace();

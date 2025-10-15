@@ -43,10 +43,13 @@ public class FileScanner {
         
         for (File file : files) {
             if (file.isDirectory()) {
+                // Check if this directory is a project
                 MediaFile mediaFile = new MediaFile(file);
-                categorizeFile(mediaFile);
+                if (mediaFile.getFileType().endsWith("-project")) {
+                    projectFiles.add(mediaFile);
+                }
                 
-                // Continue scanning subdirectories
+                // Continue scanning subdirectories recursively
                 scanDirectoryRecursive(file, progressCallback);
             } else {
                 MediaFile mediaFile = new MediaFile(file);
@@ -63,7 +66,7 @@ public class FileScanner {
     private void categorizeFile(MediaFile mediaFile) {
         String fileType = mediaFile.getFileType();
         
-        // Check if it's a project type
+        // Check if it's a project type - if so, don't categorize it as a document
         if (fileType.endsWith("-project")) {
             projectFiles.add(mediaFile);
             return;
