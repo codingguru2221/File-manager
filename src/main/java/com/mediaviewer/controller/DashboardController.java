@@ -57,6 +57,9 @@ public class DashboardController {
     private Label projectCountLabel;
     
     @FXML
+    private Label folderCountLabel; // New label for folder count
+    
+    @FXML
     private Label imageSizeLabel;
     
     @FXML
@@ -67,6 +70,9 @@ public class DashboardController {
     
     @FXML
     private Label projectSizeLabel;
+    
+    @FXML
+    private Label folderSizeLabelUI; // New label for folder size (this was the issue)
     
     @FXML
     private ProgressBar scanProgressBar;
@@ -124,7 +130,7 @@ public class DashboardController {
     }
     
     private void setupFilters() {
-        fileTypeFilter.getItems().addAll("All", "Images", "Videos", "Documents", "Projects");
+        fileTypeFilter.getItems().addAll("All", "Images", "Videos", "Documents", "Projects", "Folders");
         dateRangeFilter.getItems().addAll("All Time", "Today", "This Week", "This Month");
         
         fileTypeFilter.setOnAction(e -> applyFilters());
@@ -209,12 +215,14 @@ public class DashboardController {
         videoCountLabel.setText(String.valueOf(fileScanner.getVideoFilesCount()));
         documentCountLabel.setText(String.valueOf(fileScanner.getDocumentFilesCount()));
         projectCountLabel.setText(String.valueOf(fileScanner.getProjectFilesCount()));
+        folderCountLabel.setText(String.valueOf(fileScanner.getNormalFoldersCount())); // Set folder count
         
         // Update size labels
         imageSizeLabel.setText(formatFileSize(fileScanner.getImageFilesSize()));
         videoSizeLabel.setText(formatFileSize(fileScanner.getVideoFilesSize()));
         documentSizeLabel.setText(formatFileSize(fileScanner.getDocumentFilesSize()));
         projectSizeLabel.setText(formatFileSize(fileScanner.getProjectFilesSize()));
+        folderSizeLabelUI.setText(formatFileSize(fileScanner.getNormalFoldersSize())); // Set folder size
     }
     
     private void updateTabs() {
@@ -294,6 +302,7 @@ public class DashboardController {
         List<MediaFile> filteredVideos = new ArrayList<>(fileScanner.getVideoFiles());
         List<MediaFile> filteredDocuments = new ArrayList<>(fileScanner.getDocumentFiles());
         List<MediaFile> filteredProjects = new ArrayList<>(fileScanner.getProjectFiles());
+        List<MediaFile> filteredFolders = new ArrayList<>(fileScanner.getNormalFolders()); // Get normal folders
         
         // Apply file type filter
         if (fileType != null && !fileType.equals("All")) {
@@ -302,21 +311,31 @@ public class DashboardController {
                     filteredVideos.clear();
                     filteredDocuments.clear();
                     filteredProjects.clear();
+                    filteredFolders.clear();
                     break;
                 case "Videos":
                     filteredImages.clear();
                     filteredDocuments.clear();
                     filteredProjects.clear();
+                    filteredFolders.clear();
                     break;
                 case "Documents":
                     filteredImages.clear();
                     filteredVideos.clear();
                     filteredProjects.clear();
+                    filteredFolders.clear();
                     break;
                 case "Projects":
                     filteredImages.clear();
                     filteredVideos.clear();
                     filteredDocuments.clear();
+                    filteredFolders.clear();
+                    break;
+                case "Folders":
+                    filteredImages.clear();
+                    filteredVideos.clear();
+                    filteredDocuments.clear();
+                    filteredProjects.clear();
                     break;
             }
         }
@@ -338,6 +357,10 @@ public class DashboardController {
                 .collect(Collectors.toList());
                 
             filteredProjects = filteredProjects.stream()
+                .filter(file -> file.getLastModified().isAfter(filterDate))
+                .collect(Collectors.toList());
+                
+            filteredFolders = filteredFolders.stream()
                 .filter(file -> file.getLastModified().isAfter(filterDate))
                 .collect(Collectors.toList());
         }
@@ -379,7 +402,7 @@ public class DashboardController {
         
         // Collect all unique tags
         List<String> allTags = new ArrayList<>();
-        Stream.of(fileScanner.getImageFiles(), fileScanner.getVideoFiles(), fileScanner.getDocumentFiles(), fileScanner.getProjectFiles())
+        Stream.of(fileScanner.getImageFiles(), fileScanner.getVideoFiles(), fileScanner.getDocumentFiles(), fileScanner.getProjectFiles(), fileScanner.getNormalFolders())
             .flatMap(List::stream)
             .forEach(file -> allTags.addAll(file.getTags()));
         
@@ -405,6 +428,10 @@ public class DashboardController {
             .collect(Collectors.toList());
             
         List<MediaFile> filteredProjects = fileScanner.getProjectFiles().stream()
+            .filter(file -> file.getTags().contains(tag))
+            .collect(Collectors.toList());
+            
+        List<MediaFile> filteredFolders = fileScanner.getNormalFolders().stream()
             .filter(file -> file.getTags().contains(tag))
             .collect(Collectors.toList());
         
@@ -444,6 +471,10 @@ public class DashboardController {
     
     public List<MediaFile> getProjectFiles() {
         return fileScanner.getProjectFiles();
+    }
+    
+    public List<MediaFile> getNormalFolders() {
+        return fileScanner.getNormalFolders();
     }
     
     @FXML
@@ -503,7 +534,8 @@ public class DashboardController {
             Stream.of(fileScanner.getImageFiles(), 
                       fileScanner.getVideoFiles(), 
                       fileScanner.getDocumentFiles(),
-                      fileScanner.getProjectFiles())
+                      fileScanner.getProjectFiles(),
+                      fileScanner.getNormalFolders())
                 .flatMap(List::stream)
                 .forEach(mediaFile -> {
                     String tags = String.join(";", mediaFile.getTags());

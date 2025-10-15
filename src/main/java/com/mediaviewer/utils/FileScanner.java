@@ -14,7 +14,9 @@ public class FileScanner {
     private List<MediaFile> videoFiles;
     private List<MediaFile> documentFiles;
     private List<MediaFile> projectFiles;
+    private List<MediaFile> normalFolders; // New field for normal folders
     private Set<String> projectPaths; // To track already detected project paths
+    private String rootDirectoryPath; // To track the root directory
     private AtomicInteger scannedFilesCount;
     
     public FileScanner() {
@@ -22,6 +24,7 @@ public class FileScanner {
         this.videoFiles = new ArrayList<>();
         this.documentFiles = new ArrayList<>();
         this.projectFiles = new ArrayList<>();
+        this.normalFolders = new ArrayList<>(); // Initialize normal folders list
         this.projectPaths = new HashSet<>();
         this.scannedFilesCount = new AtomicInteger(0);
     }
@@ -31,7 +34,9 @@ public class FileScanner {
         videoFiles.clear();
         documentFiles.clear();
         projectFiles.clear();
+        normalFolders.clear(); // Clear normal folders list
         projectPaths.clear();
+        this.rootDirectoryPath = directoryPath; // Store the root directory path
         scannedFilesCount.set(0);
         
         File directory = new File(directoryPath);
@@ -53,6 +58,11 @@ public class FileScanner {
             projectPaths.add(directory.getAbsolutePath());
             // We don't scan inside project folders for more projects
             return;
+        } else {
+            // If it's a directory but not a project, and not the root directory, count it as a normal folder
+            if (!directory.getAbsolutePath().equals(rootDirectoryPath)) {
+                normalFolders.add(mediaFile);
+            }
         }
         
         // Continue scanning files and directories
@@ -116,6 +126,10 @@ public class FileScanner {
         return new ArrayList<>(projectFiles);
     }
     
+    public List<MediaFile> getNormalFolders() {
+        return new ArrayList<>(normalFolders);
+    }
+    
     public int getTotalFilesCount() {
         return imageFiles.size() + videoFiles.size() + documentFiles.size() + projectFiles.size();
     }
@@ -134,6 +148,10 @@ public class FileScanner {
     
     public int getProjectFilesCount() {
         return projectFiles.size();
+    }
+    
+    public int getNormalFoldersCount() {
+        return normalFolders.size();
     }
     
     // New methods for size calculations
@@ -155,5 +173,9 @@ public class FileScanner {
     
     public long getProjectFilesSize() {
         return projectFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+    }
+    
+    public long getNormalFoldersSize() {
+        return normalFolders.stream().mapToLong(MediaFile::getFileSize).sum();
     }
 }
