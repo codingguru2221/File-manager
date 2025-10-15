@@ -29,7 +29,8 @@
         <Label text="Size:" />
         <Slider fx:id="sizeFilter" min="0" max="100" prefWidth="150" />
         <Pane HBox.hgrow="ALWAYS" />
-        <Button text="Export" onAction="#exportFileList" />
+        <Button text="Export All" onAction="#exportFileList" />
+        <Button text="Export Projects" onAction="#exportProjects" />
     </HBox>
     
     <!-- Tag Panel -->

@@ -4,6 +4,25 @@
 <?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.mediaviewer.controller.ProjectTabController">
+    <!-- Toolbar -->
+    <HBox spacing="10" style="-fx-padding: 10;">
+        <Label text="Group by:" />
+        <ComboBox fx:id="groupByComboBox" prefWidth="120" />
+        <Label text="Sort by:" />
+        <ComboBox fx:id="sortByComboBox" prefWidth="120" />
+        <Pane HBox.hgrow="ALWAYS" />
+        <Button fx:id="refreshStatsButton" text="Refresh Statistics" />
+    </HBox>
+    
+    <!-- Statistics Panel -->
+    <VBox fx:id="statsPanel" style="-fx-padding: 10; -fx-background-color: #f0f0f0;">
+        <HBox spacing="20">
+            <Label fx:id="totalProjectsLabel" text="Total Projects: 0" />
+            <Label fx:id="totalSizeLabel" text="Total Size: 0 MB" />
+        </HBox>
+    </VBox>
+    
+    <!-- Projects Table -->
     <TableView fx:id="projectTableView" VBox.vgrow="ALWAYS">
         <columns>
             <TableColumn fx:id="nameColumn" text="Name" prefWidth="200.0" />

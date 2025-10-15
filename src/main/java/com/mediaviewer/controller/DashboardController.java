@@ -2,6 +2,8 @@ package com.mediaviewer.controller;
 
 import com.mediaviewer.model.MediaFile;
 import com.mediaviewer.utils.FileScanner;
+import com.mediaviewer.utils.ProjectExport;
+import com.mediaviewer.utils.ProjectTemplateManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -11,6 +13,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DecimalFormat;
 import java.util.List;
@@ -100,12 +103,14 @@ public class DashboardController {
     private ProjectTabController projectTabController;
     
     private FileScanner fileScanner;
+    private ProjectTemplateManager templateManager;
     private Stage primaryStage;
     private File currentFolder;
     
     @FXML
     public void initialize() {
         fileScanner = new FileScanner();
+        templateManager = new ProjectTemplateManager();
         
         // Set up event handlers
         selectFolderButton.setOnAction(event -> selectFolder());
@@ -451,6 +456,41 @@ public class DashboardController {
         File file = fileChooser.showSaveDialog(primaryStage);
         if (file != null) {
             exportToCSV(file);
+        }
+    }
+    
+    @FXML
+    private void exportProjects() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("CSV Files", "*.csv"),
+            new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+        fileChooser.setInitialFileName("projects.csv");
+        
+        File file = fileChooser.showSaveDialog(primaryStage);
+        if (file != null) {
+            String fileName = file.getName().toLowerCase();
+            try {
+                if (fileName.endsWith(".csv")) {
+                    ProjectExport.exportProjectsToCSV(fileScanner.getProjectFiles(), file.getAbsolutePath());
+                } else if (fileName.endsWith(".json")) {
+                    ProjectExport.exportProjectsToJSON(fileScanner.getProjectFiles(), file.getAbsolutePath());
+                }
+                
+                // Show success message
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Export Successful");
+                alert.setHeaderText(null);
+                alert.setContentText("Projects exported successfully to " + file.getAbsolutePath());
+                alert.showAndWait();
+            } catch (IOException e) {
+                // Show error message
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Export Failed");
+                alert.setHeaderText(null);
+                alert.setContentText("Failed to export projects: " + e.getMessage());
+                alert.showAndWait();
+            }
         }
     }
     
