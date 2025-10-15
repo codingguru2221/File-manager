@@ -51,6 +51,9 @@ public class DashboardController {
     private Label documentCountLabel;
     
     @FXML
+    private Label projectCountLabel;
+    
+    @FXML
     private Label imageSizeLabel;
     
     @FXML
@@ -58,6 +61,9 @@ public class DashboardController {
     
     @FXML
     private Label documentSizeLabel;
+    
+    @FXML
+    private Label projectSizeLabel;
     
     @FXML
     private ProgressBar scanProgressBar;
@@ -90,6 +96,9 @@ public class DashboardController {
     @FXML
     private DocumentTabController documentTabController;
     
+    @FXML
+    private ProjectTabController projectTabController;
+    
     private FileScanner fileScanner;
     private Stage primaryStage;
     private File currentFolder;
@@ -110,7 +119,7 @@ public class DashboardController {
     }
     
     private void setupFilters() {
-        fileTypeFilter.getItems().addAll("All", "Images", "Videos", "Documents");
+        fileTypeFilter.getItems().addAll("All", "Images", "Videos", "Documents", "Projects");
         dateRangeFilter.getItems().addAll("All Time", "Today", "This Week", "This Month");
         
         fileTypeFilter.setOnAction(e -> applyFilters());
@@ -194,11 +203,13 @@ public class DashboardController {
         imageCountLabel.setText(String.valueOf(fileScanner.getImageFilesCount()));
         videoCountLabel.setText(String.valueOf(fileScanner.getVideoFilesCount()));
         documentCountLabel.setText(String.valueOf(fileScanner.getDocumentFilesCount()));
+        projectCountLabel.setText(String.valueOf(fileScanner.getProjectFilesCount()));
         
         // Update size labels
         imageSizeLabel.setText(formatFileSize(fileScanner.getImageFilesSize()));
         videoSizeLabel.setText(formatFileSize(fileScanner.getVideoFilesSize()));
         documentSizeLabel.setText(formatFileSize(fileScanner.getDocumentFilesSize()));
+        projectSizeLabel.setText(formatFileSize(fileScanner.getProjectFilesSize()));
     }
     
     private void updateTabs() {
@@ -211,6 +222,12 @@ public class DashboardController {
         }
         if (documentTabController != null) {
             documentTabController.updateDocuments(fileScanner.getDocumentFiles());
+        }
+        if (projectTabController != null) {
+            projectTabController.updateProjects(fileScanner.getProjectFiles());
+            
+            // Set the dashboard controller for the project tab
+            projectTabController.setDashboardController(this);
         }
     }
     
@@ -243,6 +260,12 @@ public class DashboardController {
                            formatFileSize(file.getFileSize()).contains(query))
             .collect(Collectors.toList());
         
+        List<MediaFile> filteredProjects = fileScanner.getProjectFiles().stream()
+            .filter(file -> file.getFileName().toLowerCase().contains(query) || 
+                           file.getFileType().toLowerCase().contains(query) ||
+                           formatFileSize(file.getFileSize()).contains(query))
+            .collect(Collectors.toList());
+        
         // Update tabs with filtered results
         if (imageTabController != null) {
             imageTabController.updateImages(filteredImages);
@@ -253,6 +276,9 @@ public class DashboardController {
         if (documentTabController != null) {
             documentTabController.updateDocuments(filteredDocuments);
         }
+        if (projectTabController != null) {
+            projectTabController.updateProjects(filteredProjects);
+        }
     }
     
     private void applyFilters() {
@@ -262,6 +288,7 @@ public class DashboardController {
         List<MediaFile> filteredImages = new ArrayList<>(fileScanner.getImageFiles());
         List<MediaFile> filteredVideos = new ArrayList<>(fileScanner.getVideoFiles());
         List<MediaFile> filteredDocuments = new ArrayList<>(fileScanner.getDocumentFiles());
+        List<MediaFile> filteredProjects = new ArrayList<>(fileScanner.getProjectFiles());
         
         // Apply file type filter
         if (fileType != null && !fileType.equals("All")) {
@@ -269,14 +296,22 @@ public class DashboardController {
                 case "Images":
                     filteredVideos.clear();
                     filteredDocuments.clear();
+                    filteredProjects.clear();
                     break;
                 case "Videos":
                     filteredImages.clear();
                     filteredDocuments.clear();
+                    filteredProjects.clear();
                     break;
                 case "Documents":
                     filteredImages.clear();
                     filteredVideos.clear();
+                    filteredProjects.clear();
+                    break;
+                case "Projects":
+                    filteredImages.clear();
+                    filteredVideos.clear();
+                    filteredDocuments.clear();
                     break;
             }
         }
@@ -296,6 +331,10 @@ public class DashboardController {
             filteredDocuments = filteredDocuments.stream()
                 .filter(file -> file.getLastModified().isAfter(filterDate))
                 .collect(Collectors.toList());
+                
+            filteredProjects = filteredProjects.stream()
+                .filter(file -> file.getLastModified().isAfter(filterDate))
+                .collect(Collectors.toList());
         }
         
         // Update tabs with filtered results
@@ -307,6 +346,9 @@ public class DashboardController {
         }
         if (documentTabController != null) {
             documentTabController.updateDocuments(filteredDocuments);
+        }
+        if (projectTabController != null) {
+            projectTabController.updateProjects(filteredProjects);
         }
     }
     
@@ -332,7 +374,7 @@ public class DashboardController {
         
         // Collect all unique tags
         List<String> allTags = new ArrayList<>();
-        Stream.of(fileScanner.getImageFiles(), fileScanner.getVideoFiles(), fileScanner.getDocumentFiles())
+        Stream.of(fileScanner.getImageFiles(), fileScanner.getVideoFiles(), fileScanner.getDocumentFiles(), fileScanner.getProjectFiles())
             .flatMap(List::stream)
             .forEach(file -> allTags.addAll(file.getTags()));
         
@@ -356,6 +398,10 @@ public class DashboardController {
         List<MediaFile> filteredDocuments = fileScanner.getDocumentFiles().stream()
             .filter(file -> file.getTags().contains(tag))
             .collect(Collectors.toList());
+            
+        List<MediaFile> filteredProjects = fileScanner.getProjectFiles().stream()
+            .filter(file -> file.getTags().contains(tag))
+            .collect(Collectors.toList());
         
         // Update tabs with filtered results
         if (imageTabController != null) {
@@ -366,6 +412,9 @@ public class DashboardController {
         }
         if (documentTabController != null) {
             documentTabController.updateDocuments(filteredDocuments);
+        }
+        if (projectTabController != null) {
+            projectTabController.updateProjects(filteredProjects);
         }
     }
     
@@ -386,6 +435,10 @@ public class DashboardController {
     
     public List<MediaFile> getDocumentFiles() {
         return fileScanner.getDocumentFiles();
+    }
+    
+    public List<MediaFile> getProjectFiles() {
+        return fileScanner.getProjectFiles();
     }
     
     @FXML
@@ -409,7 +462,8 @@ public class DashboardController {
             // Write all files
             Stream.of(fileScanner.getImageFiles(), 
                       fileScanner.getVideoFiles(), 
-                      fileScanner.getDocumentFiles())
+                      fileScanner.getDocumentFiles(),
+                      fileScanner.getProjectFiles())
                 .flatMap(List::stream)
                 .forEach(mediaFile -> {
                     String tags = String.join(";", mediaFile.getTags());

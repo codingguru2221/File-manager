@@ -52,6 +52,7 @@
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
         </columnConstraints>
         <rowConstraints>
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
@@ -69,6 +70,10 @@
         <Label text="Documents" style="-fx-font-weight: bold;" GridPane.columnIndex="2" GridPane.rowIndex="0" />
         <Label fx:id="documentCountLabel" text="0" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #3498db;" GridPane.columnIndex="2" GridPane.rowIndex="1" />
         <Label fx:id="documentSizeLabel" text="0 MB" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+        
+        <Label text="Projects" style="-fx-font-weight: bold;" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+        <Label fx:id="projectCountLabel" text="0" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #3498db;" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+        <Label fx:id="projectSizeLabel" text="0 MB" GridPane.columnIndex="3" GridPane.rowIndex="2" />
     </GridPane>
     
     <!-- Progress Bar -->
@@ -90,6 +95,9 @@
         </Tab>
         <Tab text="Documents">
             <fx:include fx:id="documentTab" source="documentTab.fxml" />
+        </Tab>
+        <Tab text="Projects">
+            <fx:include fx:id="projectTab" source="projectTab.fxml" />
         </Tab>
     </TabPane>
 </VBox>

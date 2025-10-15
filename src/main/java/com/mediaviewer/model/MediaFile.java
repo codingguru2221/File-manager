@@ -13,7 +13,7 @@ import org.apache.tika.metadata.Metadata;
 public class MediaFile {
     private Path filePath;
     private String fileName;
-    private String fileType; // image, video, document
+    private String fileType; // image, video, document, or specific project type
     private String extension;
     private long fileSize;
     private LocalDateTime lastModified;
@@ -46,6 +46,12 @@ public class MediaFile {
     }
     
     private String categorizeFileType(String extension, File file) {
+        // First check if it's a project directory
+        String projectType = detectProjectType(file);
+        if (projectType != null) {
+            return projectType;
+        }
+        
         try {
             Tika tika = new Tika();
             String mimeType = tika.detect(file);
@@ -62,6 +68,64 @@ public class MediaFile {
             return categorizeByExtension(extension);
         }
         return "unknown";
+    }
+    
+    private String detectProjectType(File file) {
+        // Check if it's a directory (project folder)
+        if (!file.isDirectory()) {
+            return null;
+        }
+        
+        // Check for specific project types based on common files/folders
+        File[] files = file.listFiles();
+        if (files == null) return null;
+        
+        boolean hasGit = false;
+        boolean hasSrc = false;
+        boolean hasPackageJson = false;
+        boolean hasPomXml = false;
+        boolean hasRequirementsTxt = false;
+        boolean hasSetupPy = false;
+        boolean hasGradle = false;
+        boolean hasMaven = false;
+        boolean hasNodeModules = false;
+        boolean hasVSCode = false;
+        boolean hasIntelliJ = false;
+        
+        for (File f : files) {
+            String name = f.getName();
+            if (".git".equals(name)) hasGit = true;
+            else if ("src".equals(name)) hasSrc = true;
+            else if ("package.json".equals(name)) hasPackageJson = true;
+            else if ("pom.xml".equals(name)) hasPomXml = true;
+            else if ("requirements.txt".equals(name)) hasRequirementsTxt = true;
+            else if ("setup.py".equals(name)) hasSetupPy = true;
+            else if ("build.gradle".equals(name) || "gradlew".equals(name)) hasGradle = true;
+            else if ("node_modules".equals(name)) hasNodeModules = true;
+            else if (".vscode".equals(name)) hasVSCode = true;
+            else if (".idea".equals(name)) hasIntelliJ = true;
+            else if (name.endsWith(".iml")) hasIntelliJ = true;
+        }
+        
+        // Detect specific project types
+        if (hasPomXml || (hasSrc && hasMaven)) {
+            return "java-project";
+        } else if (hasPackageJson || (hasNodeModules && hasSrc)) {
+            return "javascript-project";
+        } else if (hasRequirementsTxt || hasSetupPy) {
+            return "python-project";
+        } else if (hasGradle) {
+            // Could be Java/Kotlin/other Gradle project
+            return "gradle-project";
+        } else if (hasIntelliJ) {
+            return "intellij-project";
+        } else if (hasVSCode) {
+            return "vscode-project";
+        } else if (hasGit && hasSrc) {
+            return "generic-project";
+        }
+        
+        return null;
     }
     
     private String categorizeByExtension(String extension) {

@@ -12,7 +12,7 @@ public class FileOrganizer {
     
     public void organizeByType(File directory, MediaFile mediaFile) {
         try {
-            String subDirName = mediaFile.getFileType(); // image, video, document
+            String subDirName = getSubdirectoryName(mediaFile);
             Path subDir = directory.toPath().resolve(subDirName);
             
             // Create subdirectory if it doesn't exist
@@ -31,6 +31,40 @@ public class FileOrganizer {
         } catch (IOException e) {
             e.printStackTrace();
             // Handle exception appropriately in a real application
+        }
+    }
+    
+    private String getSubdirectoryName(MediaFile mediaFile) {
+        String fileType = mediaFile.getFileType();
+        
+        // Handle project types
+        if (fileType.endsWith("-project")) {
+            // Convert project type to readable format
+            return convertProjectTypeToDirectoryName(fileType);
+        }
+        
+        // Handle regular file types
+        return fileType;
+    }
+    
+    private String convertProjectTypeToDirectoryName(String projectType) {
+        switch (projectType) {
+            case "java-project":
+                return "Java Projects";
+            case "javascript-project":
+                return "JavaScript Projects";
+            case "python-project":
+                return "Python Projects";
+            case "gradle-project":
+                return "Gradle Projects";
+            case "intellij-project":
+                return "IntelliJ Projects";
+            case "vscode-project":
+                return "VS Code Projects";
+            case "generic-project":
+                return "Generic Projects";
+            default:
+                return "Coding Projects";
         }
     }
     

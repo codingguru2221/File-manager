@@ -11,12 +11,14 @@ public class FileScanner {
     private List<MediaFile> imageFiles;
     private List<MediaFile> videoFiles;
     private List<MediaFile> documentFiles;
+    private List<MediaFile> projectFiles;
     private AtomicInteger scannedFilesCount;
     
     public FileScanner() {
         this.imageFiles = new ArrayList<>();
         this.videoFiles = new ArrayList<>();
         this.documentFiles = new ArrayList<>();
+        this.projectFiles = new ArrayList<>();
         this.scannedFilesCount = new AtomicInteger(0);
     }
     
@@ -24,6 +26,7 @@ public class FileScanner {
         imageFiles.clear();
         videoFiles.clear();
         documentFiles.clear();
+        projectFiles.clear();
         scannedFilesCount.set(0);
         
         File directory = new File(directoryPath);
@@ -40,6 +43,10 @@ public class FileScanner {
         
         for (File file : files) {
             if (file.isDirectory()) {
+                MediaFile mediaFile = new MediaFile(file);
+                categorizeFile(mediaFile);
+                
+                // Continue scanning subdirectories
                 scanDirectoryRecursive(file, progressCallback);
             } else {
                 MediaFile mediaFile = new MediaFile(file);
@@ -54,7 +61,15 @@ public class FileScanner {
     }
     
     private void categorizeFile(MediaFile mediaFile) {
-        switch (mediaFile.getFileType()) {
+        String fileType = mediaFile.getFileType();
+        
+        // Check if it's a project type
+        if (fileType.endsWith("-project")) {
+            projectFiles.add(mediaFile);
+            return;
+        }
+        
+        switch (fileType) {
             case "image":
                 imageFiles.add(mediaFile);
                 break;
@@ -79,8 +94,12 @@ public class FileScanner {
         return new ArrayList<>(documentFiles);
     }
     
+    public List<MediaFile> getProjectFiles() {
+        return new ArrayList<>(projectFiles);
+    }
+    
     public int getTotalFilesCount() {
-        return imageFiles.size() + videoFiles.size() + documentFiles.size();
+        return imageFiles.size() + videoFiles.size() + documentFiles.size() + projectFiles.size();
     }
     
     public int getImageFilesCount() {
@@ -95,9 +114,13 @@ public class FileScanner {
         return documentFiles.size();
     }
     
+    public int getProjectFilesCount() {
+        return projectFiles.size();
+    }
+    
     // New methods for size calculations
     public long getTotalFilesSize() {
-        return getImageFilesSize() + getVideoFilesSize() + getDocumentFilesSize();
+        return getImageFilesSize() + getVideoFilesSize() + getDocumentFilesSize() + getProjectFilesSize();
     }
     
     public long getImageFilesSize() {
@@ -110,5 +133,9 @@ public class FileScanner {
     
     public long getDocumentFilesSize() {
         return documentFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+    }
+    
+    public long getProjectFilesSize() {
+        return projectFiles.stream().mapToLong(MediaFile::getFileSize).sum();
     }
 }
