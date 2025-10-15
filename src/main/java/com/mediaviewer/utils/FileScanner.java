@@ -3,7 +3,9 @@ package com.mediaviewer.utils;
 import com.mediaviewer.model.MediaFile;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -12,6 +14,7 @@ public class FileScanner {
     private List<MediaFile> videoFiles;
     private List<MediaFile> documentFiles;
     private List<MediaFile> projectFiles;
+    private Set<String> projectPaths; // To track already detected project paths
     private AtomicInteger scannedFilesCount;
     
     public FileScanner() {
@@ -19,6 +22,7 @@ public class FileScanner {
         this.videoFiles = new ArrayList<>();
         this.documentFiles = new ArrayList<>();
         this.projectFiles = new ArrayList<>();
+        this.projectPaths = new HashSet<>();
         this.scannedFilesCount = new AtomicInteger(0);
     }
     
@@ -27,6 +31,7 @@ public class FileScanner {
         videoFiles.clear();
         documentFiles.clear();
         projectFiles.clear();
+        projectPaths.clear();
         scannedFilesCount.set(0);
         
         File directory = new File(directoryPath);
@@ -41,19 +46,24 @@ public class FileScanner {
         File[] files = directory.listFiles();
         if (files == null) return;
         
+        // Check if this directory is a project
+        MediaFile mediaFile = new MediaFile(directory);
+        if (mediaFile.getFileType().endsWith("-project")) {
+            projectFiles.add(mediaFile);
+            projectPaths.add(directory.getAbsolutePath());
+            // We don't scan inside project folders for more projects
+            return;
+        }
+        
+        // Continue scanning files and directories
         for (File file : files) {
             if (file.isDirectory()) {
-                // Check if this directory is a project
-                MediaFile mediaFile = new MediaFile(file);
-                if (mediaFile.getFileType().endsWith("-project")) {
-                    projectFiles.add(mediaFile);
-                }
-                
                 // Continue scanning subdirectories recursively
                 scanDirectoryRecursive(file, progressCallback);
             } else {
-                MediaFile mediaFile = new MediaFile(file);
-                categorizeFile(mediaFile);
+                // Categorize regular files
+                MediaFile fileMedia = new MediaFile(file);
+                categorizeFile(fileMedia);
                 
                 int count = scannedFilesCount.incrementAndGet();
                 if (progressCallback != null && count % 10 == 0) {
@@ -67,8 +77,13 @@ public class FileScanner {
         String fileType = mediaFile.getFileType();
         
         // Check if it's a project type - if so, don't categorize it as a document
+        // This is a safeguard, but project directories should already be handled in scanDirectoryRecursive
         if (fileType.endsWith("-project")) {
-            projectFiles.add(mediaFile);
+            // Projects should not reach here as directories are handled separately
+            // But if they do, ensure they're not added to documents
+            if (!projectFiles.contains(mediaFile)) {
+                projectFiles.add(mediaFile);
+            }
             return;
         }
         

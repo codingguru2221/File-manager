@@ -62,12 +62,16 @@ public class MediaFile {
                 return "video";
             } else if (mimeType.startsWith("application/")) {
                 return "document";
+            } else if (mimeType.startsWith("text/")) {
+                // Text files should be categorized as documents
+                return "document";
             }
         } catch (Exception e) {
             // Fall back to extension-based detection
-            return categorizeByExtension(extension);
         }
-        return "unknown";
+        
+        // Always fall back to extension-based detection
+        return categorizeByExtension(extension);
     }
     
     private String detectProjectType(File file) {
