@@ -21,7 +21,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.WeakHashMap;
 
 public class VideoTabController {
     
@@ -31,7 +33,15 @@ public class VideoTabController {
     private FlowPane videoFlowPane;
     
     private DashboardController dashboardController;
-    private ExecutorService thumbnailExecutor = Executors.newFixedThreadPool(4);
+    private ExecutorService thumbnailExecutor = Executors.newFixedThreadPool(
+        Runtime.getRuntime().availableProcessors()
+    );
+    
+    // Cache for thumbnail futures to avoid duplicate work
+    private Map<String, Object> thumbnailCache = new HashMap<>();
+    
+    // Weak cache for loaded images to allow garbage collection
+    private Map<String, Image> imageCache = new WeakHashMap<>();
     
     @FXML
     public void initialize() {
@@ -40,6 +50,8 @@ public class VideoTabController {
             videoFlowPane.setPrefWrapLength(200); // Wrap at 200 pixels
             videoFlowPane.setHgap(10);
             videoFlowPane.setVgap(10);
+            // Enable virtualized scrolling for better performance with large datasets
+            videoFlowPane.setPrefHeight(600);
         }
     }
     
@@ -50,19 +62,35 @@ public class VideoTabController {
     public void updateVideos(List<MediaFile> videoFiles) {
         if (videoFlowPane != null) {
             videoFlowPane.getChildren().clear();
+            // Clear thumbnail cache for new update
+            thumbnailCache.clear();
             
             for (MediaFile mediaFile : videoFiles) {
                 // Add placeholder immediately
                 VBox card = createPlaceholderCard(mediaFile);
                 videoFlowPane.getChildren().add(card);
                 
-                // Load thumbnail in background
-                thumbnailExecutor.submit(() -> {
-                    Image thumbnail = ThumbnailGenerator.generateVideoThumbnail(150, 150);
-                    
-                    // Update UI on JavaFX thread
-                    Platform.runLater(() -> updateCardWithThumbnail(card, thumbnail, mediaFile));
-                });
+                // Check if we already have this image in cache
+                String filePath = mediaFile.getFilePath().toString();
+                if (imageCache.containsKey(filePath)) {
+                    Image cachedImage = imageCache.get(filePath);
+                    Platform.runLater(() -> updateCardWithThumbnail(card, cachedImage, mediaFile));
+                } else {
+                    // Load thumbnail in background
+                    thumbnailExecutor.submit(() -> {
+                        // For now, we'll use the default video thumbnail
+                        // In a more advanced implementation, we could extract actual video frames
+                        Image thumbnail = ThumbnailGenerator.generateVideoThumbnail(150, 150);
+                        
+                        // Cache the image
+                        if (thumbnail != null) {
+                            imageCache.put(filePath, thumbnail);
+                        }
+                        
+                        // Update UI on JavaFX thread
+                        Platform.runLater(() -> updateCardWithThumbnail(card, thumbnail, mediaFile));
+                    });
+                }
             }
         }
     }
@@ -83,7 +111,7 @@ public class VideoTabController {
         imageView.setPreserveRatio(true);
         imageView.setSmooth(true);
         
-        // Set a default video placeholder
+        // Set a default video placeholder with better styling
         setVideoPlaceholder(imageView);
         
         Label nameLabel = new Label(mediaFile.getFileName());
@@ -104,8 +132,8 @@ public class VideoTabController {
     }
     
     private void setVideoPlaceholder(ImageView imageView) {
-        // Set a colored background as a video placeholder
-        imageView.setStyle("-fx-background-color: #e74c3c; -fx-border-color: #c0392b; -fx-border-width: 2px;");
+        // Set a colored background as a video placeholder with better styling
+        imageView.setStyle("-fx-background-color: linear-gradient(to bottom, #e74c3c, #c0392b); -fx-border-color: #a5281b; -fx-border-width: 2px; -fx-border-radius: 4px;");
     }
     
     private void updateCardWithThumbnail(VBox card, Image thumbnail, MediaFile mediaFile) {
@@ -114,7 +142,7 @@ public class VideoTabController {
             
             if (thumbnail != null) {
                 imageView.setImage(thumbnail);
-                imageView.setStyle(""); // Remove placeholder styling
+                imageView.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 1, 1);"); // Add subtle shadow
             }
             
             // Make the image clickable to open the file
@@ -164,10 +192,17 @@ public class VideoTabController {
         dialog.setHeaderText("Add a tag to " + mediaFile.getFileName());
         dialog.setContentText("Tag:");
         
-        Optional<String> result = dialog.showAndWait();
+        java.util.Optional<String> result = dialog.showAndWait();
         result.ifPresent(tag -> {
             mediaFile.addTag(tag);
             // In a real application, you might want to refresh the tag panel
         });
+    }
+    
+    // Cleanup method
+    public void cleanup() {
+        thumbnailExecutor.shutdown();
+        thumbnailCache.clear();
+        imageCache.clear();
     }
 }

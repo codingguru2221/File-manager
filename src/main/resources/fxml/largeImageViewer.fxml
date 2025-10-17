@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.mediaviewer.controller.LargeImageViewerController">
+    <children>
+        <!-- Toolbar -->
+        <HBox spacing="10.0" style="-fx-padding: 10;">
+            <children>
+                <Button mnemonicParsing="false" onAction="#handleZoomIn" text="Zoom In" />
+                <Button mnemonicParsing="false" onAction="#handleZoomOut" text="Zoom Out" />
+                <Button mnemonicParsing="false" onAction="#handleResetView" text="Reset View" />
+                <Button mnemonicParsing="false" onAction="#handleClose" text="Close" />
+                <Region HBox.hgrow="ALWAYS" />
+                <Label fx:id="statusLabel" text="Loading..." />
+            </children>
+        </HBox>
+        
+        <!-- Image display area -->
+        <StackPane fx:id="imageContainer" VBox.vgrow="ALWAYS">
+            <children>
+                <ImageView fx:id="imageView" 
+                          pickOnBounds="true" 
+                          preserveRatio="true"
+                          smooth="true">
+                    <viewport>
+                        <javafx.geometry.Rectangle2D />
+                    </viewport>
+                </ImageView>
+                <ProgressBar fx:id="loadingProgressBar" 
+                            visible="false" 
+                            StackPane.alignment="CENTER" />
+            </children>
+        </StackPane>
+    </children>
+</VBox>

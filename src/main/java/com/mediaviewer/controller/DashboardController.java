@@ -4,6 +4,7 @@ import com.mediaviewer.model.MediaFile;
 import com.mediaviewer.utils.FileScanner;
 import com.mediaviewer.utils.ProjectExport;
 import com.mediaviewer.utils.ProjectTemplateManager;
+import com.mediaviewer.utils.ThumbnailGenerator;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -18,11 +19,16 @@ import java.io.PrintWriter;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class DashboardController {
     
@@ -113,6 +119,9 @@ public class DashboardController {
     private Stage primaryStage;
     private File currentFolder;
     
+    // Executor for background tasks
+    private ExecutorService backgroundExecutor = Executors.newFixedThreadPool(2);
+    
     @FXML
     public void initialize() {
         fileScanner = new FileScanner();
@@ -164,13 +173,15 @@ public class DashboardController {
         progressLabel.setText("Scanning files...");
         
         // Run scanning in a background thread
-        new Thread(() -> {
+        CompletableFuture.runAsync(() -> {
             try {
                 fileScanner.scanDirectory(directory.getAbsolutePath(), count -> {
-                    // Update progress on UI thread
-                    javafx.application.Platform.runLater(() -> {
-                        progressLabel.setText("Scanned " + count + " files...");
-                    });
+                    // Update progress on UI thread less frequently to reduce UI updates
+                    if (count % 100 == 0) {
+                        javafx.application.Platform.runLater(() -> {
+                            progressLabel.setText("Scanned " + count + " files...");
+                        });
+                    }
                 });
                 
                 // Update UI when scanning is complete
@@ -183,7 +194,7 @@ public class DashboardController {
                     progressLabel.setVisible(false);
                 });
             }
-        }).start();
+        }, backgroundExecutor);
     }
     
     private void onScanComplete() {
@@ -226,22 +237,32 @@ public class DashboardController {
     }
     
     private void updateTabs() {
-        // Update each tab with the scanned data
-        if (imageTabController != null) {
-            imageTabController.updateImages(fileScanner.getImageFiles());
-        }
-        if (videoTabController != null) {
-            videoTabController.updateVideos(fileScanner.getVideoFiles());
-        }
-        if (documentTabController != null) {
-            documentTabController.updateDocuments(fileScanner.getDocumentFiles());
-        }
-        if (projectTabController != null) {
-            projectTabController.updateProjects(fileScanner.getProjectFiles());
+        // Update each tab with the scanned data using background processing
+        CompletableFuture.runAsync(() -> {
+            List<MediaFile> images = fileScanner.getImageFiles();
+            List<MediaFile> videos = fileScanner.getVideoFiles();
+            List<MediaFile> documents = fileScanner.getDocumentFiles();
+            List<MediaFile> projects = fileScanner.getProjectFiles();
             
-            // Set the dashboard controller for the project tab
-            projectTabController.setDashboardController(this);
-        }
+            // Update UI on JavaFX thread
+            javafx.application.Platform.runLater(() -> {
+                if (imageTabController != null) {
+                    imageTabController.updateImages(images);
+                }
+                if (videoTabController != null) {
+                    videoTabController.updateVideos(videos);
+                }
+                if (documentTabController != null) {
+                    documentTabController.updateDocuments(documents);
+                }
+                if (projectTabController != null) {
+                    projectTabController.updateProjects(projects);
+                    
+                    // Set the dashboard controller for the project tab
+                    projectTabController.setDashboardController(this);
+                }
+            });
+        }, backgroundExecutor);
     }
     
     @FXML
@@ -254,130 +275,154 @@ public class DashboardController {
             return;
         }
         
-        // Filter files based on multiple criteria
-        List<MediaFile> filteredImages = fileScanner.getImageFiles().stream()
-            .filter(file -> file.getFileName().toLowerCase().contains(query) || 
-                           file.getExtension().toLowerCase().contains(query) ||
-                           formatFileSize(file.getFileSize()).contains(query))
-            .collect(Collectors.toList());
-        
-        List<MediaFile> filteredVideos = fileScanner.getVideoFiles().stream()
-            .filter(file -> file.getFileName().toLowerCase().contains(query) || 
-                           file.getExtension().toLowerCase().contains(query) ||
-                           formatFileSize(file.getFileSize()).contains(query))
-            .collect(Collectors.toList());
-        
-        List<MediaFile> filteredDocuments = fileScanner.getDocumentFiles().stream()
-            .filter(file -> file.getFileName().toLowerCase().contains(query) || 
-                           file.getExtension().toLowerCase().contains(query) ||
-                           formatFileSize(file.getFileSize()).contains(query))
-            .collect(Collectors.toList());
-        
-        List<MediaFile> filteredProjects = fileScanner.getProjectFiles().stream()
-            .filter(file -> file.getFileName().toLowerCase().contains(query) || 
-                           file.getFileType().toLowerCase().contains(query) ||
-                           formatFileSize(file.getFileSize()).contains(query))
-            .collect(Collectors.toList());
-        
-        // Update tabs with filtered results
-        if (imageTabController != null) {
-            imageTabController.updateImages(filteredImages);
-        }
-        if (videoTabController != null) {
-            videoTabController.updateVideos(filteredVideos);
-        }
-        if (documentTabController != null) {
-            documentTabController.updateDocuments(filteredDocuments);
-        }
-        if (projectTabController != null) {
-            projectTabController.updateProjects(filteredProjects);
-        }
+        // Filter files based on multiple criteria in background
+        CompletableFuture.runAsync(() -> {
+            // Filter files based on multiple criteria
+            List<MediaFile> filteredImages = fileScanner.getImageFiles().stream()
+                .filter(file -> file.getFileName().toLowerCase().contains(query) || 
+                               file.getExtension().toLowerCase().contains(query) ||
+                               formatFileSize(file.getFileSize()).contains(query))
+                .collect(Collectors.toList());
+            
+            List<MediaFile> filteredVideos = fileScanner.getVideoFiles().stream()
+                .filter(file -> file.getFileName().toLowerCase().contains(query) || 
+                               file.getExtension().toLowerCase().contains(query) ||
+                               formatFileSize(file.getFileSize()).contains(query))
+                .collect(Collectors.toList());
+            
+            List<MediaFile> filteredDocuments = fileScanner.getDocumentFiles().stream()
+                .filter(file -> file.getFileName().toLowerCase().contains(query) || 
+                               file.getExtension().toLowerCase().contains(query) ||
+                               formatFileSize(file.getFileSize()).contains(query))
+                .collect(Collectors.toList());
+            
+            List<MediaFile> filteredProjects = fileScanner.getProjectFiles().stream()
+                .filter(file -> file.getFileName().toLowerCase().contains(query) || 
+                               file.getFileType().toLowerCase().contains(query) ||
+                               formatFileSize(file.getFileSize()).contains(query))
+                .collect(Collectors.toList());
+            
+            // Update UI on JavaFX thread
+            javafx.application.Platform.runLater(() -> {
+                // Update tabs with filtered results
+                if (imageTabController != null) {
+                    imageTabController.updateImages(filteredImages);
+                }
+                if (videoTabController != null) {
+                    videoTabController.updateVideos(filteredVideos);
+                }
+                if (documentTabController != null) {
+                    documentTabController.updateDocuments(filteredDocuments);
+                }
+                if (projectTabController != null) {
+                    projectTabController.updateProjects(filteredProjects);
+                }
+            });
+        }, backgroundExecutor);
     }
     
     private void applyFilters() {
         String fileType = fileTypeFilter.getValue();
         String dateRange = dateRangeFilter.getValue();
         
-        List<MediaFile> filteredImages = new ArrayList<>(fileScanner.getImageFiles());
-        List<MediaFile> filteredVideos = new ArrayList<>(fileScanner.getVideoFiles());
-        List<MediaFile> filteredDocuments = new ArrayList<>(fileScanner.getDocumentFiles());
-        List<MediaFile> filteredProjects = new ArrayList<>(fileScanner.getProjectFiles());
-        List<MediaFile> filteredFolders = new ArrayList<>(fileScanner.getNormalFolders()); // Get normal folders
-        
-        // Apply file type filter
-        if (fileType != null && !fileType.equals("All")) {
-            switch (fileType) {
-                case "Images":
-                    filteredVideos.clear();
-                    filteredDocuments.clear();
-                    filteredProjects.clear();
-                    filteredFolders.clear();
-                    break;
-                case "Videos":
-                    filteredImages.clear();
-                    filteredDocuments.clear();
-                    filteredProjects.clear();
-                    filteredFolders.clear();
-                    break;
-                case "Documents":
-                    filteredImages.clear();
-                    filteredVideos.clear();
-                    filteredProjects.clear();
-                    filteredFolders.clear();
-                    break;
-                case "Projects":
-                    filteredImages.clear();
-                    filteredVideos.clear();
-                    filteredDocuments.clear();
-                    filteredFolders.clear();
-                    break;
-                case "Folders":
-                    filteredImages.clear();
-                    filteredVideos.clear();
-                    filteredDocuments.clear();
-                    filteredProjects.clear();
-                    break;
-            }
-        }
-        
-        // Apply date range filter
-        if (dateRange != null && !dateRange.equals("All Time")) {
-            LocalDateTime filterDate = calculateFilterDate(dateRange);
+        // Apply filters in background
+        CompletableFuture.runAsync(() -> {
+            List<MediaFile> initialImages = new ArrayList<>(fileScanner.getImageFiles());
+            List<MediaFile> initialVideos = new ArrayList<>(fileScanner.getVideoFiles());
+            List<MediaFile> initialDocuments = new ArrayList<>(fileScanner.getDocumentFiles());
+            List<MediaFile> initialProjects = new ArrayList<>(fileScanner.getProjectFiles());
+            List<MediaFile> initialFolders = new ArrayList<>(fileScanner.getNormalFolders()); // Get normal folders
             
-            filteredImages = filteredImages.stream()
-                .filter(file -> file.getLastModified().isAfter(filterDate))
-                .collect(Collectors.toList());
+            List<MediaFile> filteredImages = initialImages;
+            List<MediaFile> filteredVideos = initialVideos;
+            List<MediaFile> filteredDocuments = initialDocuments;
+            List<MediaFile> filteredProjects = initialProjects;
+            List<MediaFile> filteredFolders = initialFolders;
+            
+            // Apply file type filter
+            if (fileType != null && !fileType.equals("All")) {
+                switch (fileType) {
+                    case "Images":
+                        filteredVideos = new ArrayList<>();
+                        filteredDocuments = new ArrayList<>();
+                        filteredProjects = new ArrayList<>();
+                        filteredFolders = new ArrayList<>();
+                        break;
+                    case "Videos":
+                        filteredImages = new ArrayList<>();
+                        filteredDocuments = new ArrayList<>();
+                        filteredProjects = new ArrayList<>();
+                        filteredFolders = new ArrayList<>();
+                        break;
+                    case "Documents":
+                        filteredImages = new ArrayList<>();
+                        filteredVideos = new ArrayList<>();
+                        filteredProjects = new ArrayList<>();
+                        filteredFolders = new ArrayList<>();
+                        break;
+                    case "Projects":
+                        filteredImages = new ArrayList<>();
+                        filteredVideos = new ArrayList<>();
+                        filteredDocuments = new ArrayList<>();
+                        filteredFolders = new ArrayList<>();
+                        break;
+                    case "Folders":
+                        filteredImages = new ArrayList<>();
+                        filteredVideos = new ArrayList<>();
+                        filteredDocuments = new ArrayList<>();
+                        filteredProjects = new ArrayList<>();
+                        break;
+                }
+            }
+            
+            // Apply date range filter
+            if (dateRange != null && !dateRange.equals("All Time")) {
+                LocalDateTime filterDate = calculateFilterDate(dateRange);
                 
-            filteredVideos = filteredVideos.stream()
-                .filter(file -> file.getLastModified().isAfter(filterDate))
-                .collect(Collectors.toList());
-                
-            filteredDocuments = filteredDocuments.stream()
-                .filter(file -> file.getLastModified().isAfter(filterDate))
-                .collect(Collectors.toList());
-                
-            filteredProjects = filteredProjects.stream()
-                .filter(file -> file.getLastModified().isAfter(filterDate))
-                .collect(Collectors.toList());
-                
-            filteredFolders = filteredFolders.stream()
-                .filter(file -> file.getLastModified().isAfter(filterDate))
-                .collect(Collectors.toList());
-        }
-        
-        // Update tabs with filtered results
-        if (imageTabController != null) {
-            imageTabController.updateImages(filteredImages);
-        }
-        if (videoTabController != null) {
-            videoTabController.updateVideos(filteredVideos);
-        }
-        if (documentTabController != null) {
-            documentTabController.updateDocuments(filteredDocuments);
-        }
-        if (projectTabController != null) {
-            projectTabController.updateProjects(filteredProjects);
-        }
+                filteredImages = filteredImages.stream()
+                    .filter(file -> file.getLastModified().isAfter(filterDate))
+                    .collect(Collectors.toList());
+                    
+                filteredVideos = filteredVideos.stream()
+                    .filter(file -> file.getLastModified().isAfter(filterDate))
+                    .collect(Collectors.toList());
+                    
+                filteredDocuments = filteredDocuments.stream()
+                    .filter(file -> file.getLastModified().isAfter(filterDate))
+                    .collect(Collectors.toList());
+                    
+                filteredProjects = filteredProjects.stream()
+                    .filter(file -> file.getLastModified().isAfter(filterDate))
+                    .collect(Collectors.toList());
+                    
+                filteredFolders = filteredFolders.stream()
+                    .filter(file -> file.getLastModified().isAfter(filterDate))
+                    .collect(Collectors.toList());
+            }
+            
+            // Store final results in final variables for lambda
+            final List<MediaFile> finalImages = filteredImages;
+            final List<MediaFile> finalVideos = filteredVideos;
+            final List<MediaFile> finalDocuments = filteredDocuments;
+            final List<MediaFile> finalProjects = filteredProjects;
+            
+            // Update UI on JavaFX thread
+            javafx.application.Platform.runLater(() -> {
+                // Update tabs with filtered results
+                if (imageTabController != null) {
+                    imageTabController.updateImages(finalImages);
+                }
+                if (videoTabController != null) {
+                    videoTabController.updateVideos(finalVideos);
+                }
+                if (documentTabController != null) {
+                    documentTabController.updateDocuments(finalDocuments);
+                }
+                if (projectTabController != null) {
+                    projectTabController.updateProjects(finalProjects);
+                }
+            });
+        }, backgroundExecutor);
     }
     
     private LocalDateTime calculateFilterDate(String dateRange) {
@@ -400,18 +445,28 @@ public class DashboardController {
         
         tagPanel.getChildren().clear();
         
-        // Collect all unique tags
-        List<String> allTags = new ArrayList<>();
-        Stream.of(fileScanner.getImageFiles(), fileScanner.getVideoFiles(), fileScanner.getDocumentFiles(), fileScanner.getProjectFiles(), fileScanner.getNormalFolders())
-            .flatMap(List::stream)
-            .forEach(file -> allTags.addAll(file.getTags()));
-        
-        // Create tag buttons
-        for (String tag : allTags) {
-            Button tagButton = new Button(tag);
-            tagButton.setOnAction(e -> filterByTag(tag));
-            tagPanel.getChildren().add(tagButton);
-        }
+        // Collect all tags from all files in background
+        CompletableFuture.runAsync(() -> {
+            Set<String> allTags = Stream.of(
+                fileScanner.getImageFiles().stream(),
+                fileScanner.getVideoFiles().stream(),
+                fileScanner.getDocumentFiles().stream(),
+                fileScanner.getProjectFiles().stream(),
+                fileScanner.getNormalFolders().stream()
+            )
+            .flatMap(s -> s)
+            .flatMap(file -> file.getTags().stream())
+            .collect(Collectors.toSet());
+            
+            // Update UI on JavaFX thread
+            javafx.application.Platform.runLater(() -> {
+                for (String tag : allTags) {
+                    Button tagButton = new Button(tag);
+                    tagButton.setOnAction(e -> filterByTag(tag));
+                    tagPanel.getChildren().add(tagButton);
+                }
+            });
+        }, backgroundExecutor);
     }
     
     private void filterByTag(String tag) {
@@ -450,29 +505,6 @@ public class DashboardController {
         }
     }
     
-    private String formatFileSize(long size) {
-        if (size < 1024) return size + " B";
-        if (size < 1024 * 1024) return String.format("%.1f KB", size / 1024.0);
-        if (size < 1024 * 1024 * 1024) return String.format("%.1f MB", size / (1024.0 * 1024));
-        return String.format("%.1f GB", size / (1024.0 * 1024 * 1024));
-    }
-    
-    public List<MediaFile> getImageFiles() {
-        return fileScanner.getImageFiles();
-    }
-    
-    public List<MediaFile> getVideoFiles() {
-        return fileScanner.getVideoFiles();
-    }
-    
-    public List<MediaFile> getDocumentFiles() {
-        return fileScanner.getDocumentFiles();
-    }
-    
-    public List<MediaFile> getProjectFiles() {
-        return fileScanner.getProjectFiles();
-    }
-    
     public List<MediaFile> getNormalFolders() {
         return fileScanner.getNormalFolders();
     }
@@ -507,20 +539,9 @@ public class DashboardController {
                 } else if (fileName.endsWith(".json")) {
                     ProjectExport.exportProjectsToJSON(fileScanner.getProjectFiles(), file.getAbsolutePath());
                 }
-                
-                // Show success message
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Export Successful");
-                alert.setHeaderText(null);
-                alert.setContentText("Projects exported successfully to " + file.getAbsolutePath());
-                alert.showAndWait();
             } catch (IOException e) {
-                // Show error message
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Export Failed");
-                alert.setHeaderText(null);
-                alert.setContentText("Failed to export projects: " + e.getMessage());
-                alert.showAndWait();
+                e.printStackTrace();
+                // In a real application, you might want to show an error dialog
             }
         }
     }
@@ -528,29 +549,61 @@ public class DashboardController {
     private void exportToCSV(File file) {
         try (PrintWriter writer = new PrintWriter(file)) {
             // Write CSV header
-            writer.println("Name,Type,Extension,Size,Modified,Favorite,Tags");
+            writer.println("Name,Type,Size,Modified Date");
             
-            // Write all files
-            Stream.of(fileScanner.getImageFiles(), 
-                      fileScanner.getVideoFiles(), 
-                      fileScanner.getDocumentFiles(),
-                      fileScanner.getProjectFiles(),
-                      fileScanner.getNormalFolders())
-                .flatMap(List::stream)
-                .forEach(mediaFile -> {
-                    String tags = String.join(";", mediaFile.getTags());
-                    writer.printf("\"%s\",%s,%s,%d,\"%s\",%s,\"%s\"%n", 
-                        mediaFile.getFileName().replace("\"", "\"\""), 
-                        mediaFile.getFileType(), 
-                        mediaFile.getExtension(),
-                        mediaFile.getFileSize(), 
-                        mediaFile.getLastModified().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                        mediaFile.isFavorite() ? "Yes" : "No",
-                        tags.replace("\"", "\"\""));
-                });
-        } catch (Exception e) {
-            // In a real application, you might want to show an error dialog
+            // Write image files
+            for (MediaFile fileMedia : fileScanner.getImageFiles()) {
+                writer.printf("%s,%s,%d,%s%n", 
+                    fileMedia.getFileName(), 
+                    fileMedia.getFileType(), 
+                    fileMedia.getFileSize(),
+                    fileMedia.getLastModified().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
+            
+            // Write video files
+            for (MediaFile fileMedia : fileScanner.getVideoFiles()) {
+                writer.printf("%s,%s,%d,%s%n", 
+                    fileMedia.getFileName(), 
+                    fileMedia.getFileType(), 
+                    fileMedia.getFileSize(),
+                    fileMedia.getLastModified().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
+            
+            // Write document files
+            for (MediaFile fileMedia : fileScanner.getDocumentFiles()) {
+                writer.printf("%s,%s,%d,%s%n", 
+                    fileMedia.getFileName(), 
+                    fileMedia.getFileType(), 
+                    fileMedia.getFileSize(),
+                    fileMedia.getLastModified().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
+            
+            // Write project files
+            for (MediaFile fileMedia : fileScanner.getProjectFiles()) {
+                writer.printf("%s,%s,%d,%s%n", 
+                    fileMedia.getFileName(), 
+                    fileMedia.getFileType(), 
+                    fileMedia.getFileSize(),
+                    fileMedia.getLastModified().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
+        } catch (IOException e) {
             e.printStackTrace();
+            // In a real application, you might want to show an error dialog
         }
+    }
+    
+    private String formatFileSize(long size) {
+        if (size < 1024) return size + " B";
+        if (size < 1024 * 1024) return String.format("%.1f KB", size / 1024.0);
+        if (size < 1024 * 1024 * 1024) return String.format("%.1f MB", size / (1024.0 * 1024));
+        return String.format("%.1f GB", size / (1024.0 * 1024 * 1024));
+    }
+    
+    // Cleanup method
+    public void cleanup() {
+        backgroundExecutor.shutdown();
+        if (imageTabController != null) imageTabController.cleanup();
+        if (videoTabController != null) videoTabController.cleanup();
+        ThumbnailGenerator.shutdown();
     }
 }

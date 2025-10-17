@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
 
 public class FileScanner {
     private List<MediaFile> imageFiles;
@@ -44,41 +46,71 @@ public class FileScanner {
             throw new IllegalArgumentException("Invalid directory path: " + directoryPath);
         }
         
-        scanDirectoryRecursive(directory, progressCallback);
+        // Use parallel processing for better performance on large directories
+        ForkJoinPool forkJoinPool = new ForkJoinPool();
+        try {
+            forkJoinPool.invoke(new ScanDirectoryAction(directory, progressCallback));
+        } finally {
+            forkJoinPool.shutdown();
+        }
     }
     
-    private void scanDirectoryRecursive(File directory, Consumer<Integer> progressCallback) {
-        File[] files = directory.listFiles();
-        if (files == null) return;
+    private class ScanDirectoryAction extends RecursiveAction {
+        private final File directory;
+        private final Consumer<Integer> progressCallback;
         
-        // Check if this directory is a project
-        MediaFile mediaFile = new MediaFile(directory);
-        if (mediaFile.getFileType().endsWith("-project")) {
-            projectFiles.add(mediaFile);
-            projectPaths.add(directory.getAbsolutePath());
-            // We don't scan inside project folders for more projects
-            return;
-        } else {
-            // If it's a directory but not a project, and not the root directory, count it as a normal folder
-            if (!directory.getAbsolutePath().equals(rootDirectoryPath)) {
-                normalFolders.add(mediaFile);
-            }
+        public ScanDirectoryAction(File directory, Consumer<Integer> progressCallback) {
+            this.directory = directory;
+            this.progressCallback = progressCallback;
         }
         
-        // Continue scanning files and directories
-        for (File file : files) {
-            if (file.isDirectory()) {
-                // Continue scanning subdirectories recursively
-                scanDirectoryRecursive(file, progressCallback);
-            } else {
-                // Categorize regular files
-                MediaFile fileMedia = new MediaFile(file);
-                categorizeFile(fileMedia);
-                
-                int count = scannedFilesCount.incrementAndGet();
-                if (progressCallback != null && count % 10 == 0) {
-                    progressCallback.accept(count);
+        @Override
+        protected void compute() {
+            File[] files = directory.listFiles();
+            if (files == null) return;
+            
+            // Check if this directory is a project
+            MediaFile mediaFile = new MediaFile(directory);
+            if (mediaFile.getFileType().endsWith("-project")) {
+                synchronized (projectFiles) {
+                    projectFiles.add(mediaFile);
+                    projectPaths.add(directory.getAbsolutePath());
                 }
+                // We don't scan inside project folders for more projects
+                return;
+            } else {
+                // If it's a directory but not a project, and not the root directory, count it as a normal folder
+                if (!directory.getAbsolutePath().equals(rootDirectoryPath)) {
+                    synchronized (normalFolders) {
+                        normalFolders.add(mediaFile);
+                    }
+                }
+            }
+            
+            List<ScanDirectoryAction> subTasks = new ArrayList<>();
+            
+            // Continue scanning files and directories
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    // Create subtask for subdirectories
+                    ScanDirectoryAction subTask = new ScanDirectoryAction(file, progressCallback);
+                    subTasks.add(subTask);
+                    subTask.fork();
+                } else {
+                    // Categorize regular files
+                    MediaFile fileMedia = new MediaFile(file);
+                    categorizeFile(fileMedia);
+                    
+                    int count = scannedFilesCount.incrementAndGet();
+                    if (progressCallback != null && count % 50 == 0) { // Update less frequently to reduce UI updates
+                        progressCallback.accept(count);
+                    }
+                }
+            }
+            
+            // Wait for all subtasks to complete
+            for (ScanDirectoryAction subTask : subTasks) {
+                subTask.join();
             }
         }
     }
@@ -91,21 +123,29 @@ public class FileScanner {
         if (fileType.endsWith("-project")) {
             // Projects should not reach here as directories are handled separately
             // But if they do, ensure they're not added to documents
-            if (!projectFiles.contains(mediaFile)) {
-                projectFiles.add(mediaFile);
+            synchronized (projectFiles) {
+                if (!projectFiles.contains(mediaFile)) {
+                    projectFiles.add(mediaFile);
+                }
             }
             return;
         }
         
         switch (fileType) {
             case "image":
-                imageFiles.add(mediaFile);
+                synchronized (imageFiles) {
+                    imageFiles.add(mediaFile);
+                }
                 break;
             case "video":
-                videoFiles.add(mediaFile);
+                synchronized (videoFiles) {
+                    videoFiles.add(mediaFile);
+                }
                 break;
             case "document":
-                documentFiles.add(mediaFile);
+                synchronized (documentFiles) {
+                    documentFiles.add(mediaFile);
+                }
                 break;
         }
     }
@@ -160,22 +200,22 @@ public class FileScanner {
     }
     
     public long getImageFilesSize() {
-        return imageFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+        return imageFiles.parallelStream().mapToLong(MediaFile::getFileSize).sum();
     }
     
     public long getVideoFilesSize() {
-        return videoFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+        return videoFiles.parallelStream().mapToLong(MediaFile::getFileSize).sum();
     }
     
     public long getDocumentFilesSize() {
-        return documentFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+        return documentFiles.parallelStream().mapToLong(MediaFile::getFileSize).sum();
     }
     
     public long getProjectFilesSize() {
-        return projectFiles.stream().mapToLong(MediaFile::getFileSize).sum();
+        return projectFiles.parallelStream().mapToLong(MediaFile::getFileSize).sum();
     }
     
     public long getNormalFoldersSize() {
-        return normalFolders.stream().mapToLong(MediaFile::getFileSize).sum();
+        return normalFolders.parallelStream().mapToLong(MediaFile::getFileSize).sum();
     }
 }
